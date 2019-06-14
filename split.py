@@ -14,8 +14,8 @@ def generateMask(image):
         image, -1, gaussKernel), cv2.COLOR_RGB2HSV)
     mask = cv2.inRange(blurred, lowRange, highRange)
     mask = cv2.bitwise_not(mask)
-    mask = cv2.erode(mask, erodeKernel, iterations=30)
-    mask = cv2.dilate(mask, erodeKernel, iterations=20)
+    mask = cv2.erode(mask, erodeKernel, iterations=15)
+    mask = cv2.dilate(mask, erodeKernel, iterations=5)
 
     return mask
 
@@ -35,6 +35,41 @@ def getBeansByColor(mask):
         beansByColor.append([mean, beanContour])
 
     return beansByColor
+
+
+def isCloseColor(colorA, colorB, leeway):
+    redSimilar = abs(colorA[0] - colorB[0]) < leeway
+    greenSimilar = abs(colorA[1] - colorB[1]) < leeway
+    blueSimilar = abs(colorA[2] - colorB[2]) < leeway
+    return redSimilar and greenSimilar and blueSimilar
+
+
+def filterCoffeeBeans(beansByColor):
+    groups = 4
+    coffeeBeanGroup = 1
+    beanGroups = []
+    beans = []
+
+    for i in range(len(beansByColor)):
+        beanWithColor = beansByColor[i]
+        color = beanWithColor[0]
+        beanContours = beanWithColor[1]
+
+        if i == 0:
+            beanGroups.append([beanWithColor])
+        else:
+            assigned = False
+            for group in beanGroups:
+                if isCloseColor(group[0][0], color, 20):
+                    group.append(beanWithColor)
+                    assigned = True
+                    break
+            if assigned == False:
+                beanGroups.append([beanWithColor])
+
+    beanGroups = sorted(beanGroups, key=lambda x: x[0][0])
+
+    return beanGroups[coffeeBeanGroup]
 
 
 def drawBean(beanContours, rectangle=True):
@@ -60,50 +95,21 @@ def drawBean(beanContours, rectangle=True):
         cv2.drawContours(image, [beanContours], -1, (0, 255, 0), 3)
 
 
-def isCloseColor(colorA, colorB, leeway):
-    redSimilar = abs(colorA[0] - colorB[0]) < leeway
-    greenSimilar = abs(colorA[1] - colorB[1]) < leeway
-    blueSimilar = abs(colorA[2] - colorB[2]) < leeway
-    return redSimilar and greenSimilar and blueSimilar
+def drawBeans(beans):
+    for bean in beans:
+        drawBean(bean[1])
 
 
-def drawBeans(beansByColor):
-    groups = 4
-    beanGroups = []
-    beans = []
-
-    for i in range(len(beansByColor)):
-        beanWithColor = beansByColor[i]
-        color = beanWithColor[0]
-        beanContours = beanWithColor[1]
-        r = color[0]
-        g = color[1]
-        b = color[2]
-
-        if i == 0:
-            beanGroups.append([beanWithColor])
-        else:
-            for group in beanGroups:
-                if isCloseColor(group[0][0], color, 20):
-                    group[0].append(beanWithColor)
-                else:
-                    beanGroups.append([beanWithColor])
-
-        beans.append(beanWithColor)
-        drawBean(beanContours)
-
-    return beans[0]
-
-
-imageLocation1 = 'bonen/Image__2019-04-29__03-03-16.bmp'
-imageLocation2 = 'bonen/Image__2019-04-29__02-58-28.bmp'
-imageLocation3 = 'bonen/Image__2019-04-29__02-56-26.bmp'
-imageLocation4 = 'bonen/Image__2019-04-29__02-54-56.bmp'
-image = cv2.cvtColor(cv2.imread(imageLocation1), cv2.COLOR_BGR2RGB)
+imageLocation1 = 'images/Image__2019-04-29__03-03-16.bmp'
+imageLocation2 = 'images/Image__2019-04-29__02-58-28.bmp'
+imageLocation3 = 'images/Image__2019-04-29__02-56-26.bmp'
+imageLocation4 = 'images/Image__2019-04-29__02-54-56.bmp'
+image = cv2.cvtColor(cv2.imread(imageLocation3), cv2.COLOR_BGR2RGB)
 
 mask = generateMask(image)
 beansByColor = getBeansByColor(mask)
-beans = drawBeans(beansByColor)
+beans = filterCoffeeBeans(beansByColor)
+drawBeans(beans)
 
 # Visualize
 plt.figure(figsize=(15, 6), frameon=False)
