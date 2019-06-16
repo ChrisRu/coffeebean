@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import sys
 from matplotlib import pyplot as plt
 
 
@@ -44,11 +45,30 @@ def isCloseColor(colorA, colorB, leeway):
     return redSimilar and greenSimilar and blueSimilar
 
 
+def isCloseSize(contourA, contourB, leeway):
+    aX, aY, aW, aH = cv2.boundingRect(contourA)
+    bX, bY, bW, bH = cv2.boundingRect(contourB)
+    sameSize = abs((bW * bH) - (aH * aW)) < leeway
+    return sameSize
+
+
 def filterCoffeeBeans(beansByColor):
     groups = 4
     coffeeBeanGroup = 1
     beanGroups = []
     beans = []
+
+    # minRed = min(beansByColor, key=lambda x: x[0][0])[0][0]
+    # minGreen = min(beansByColor, key=lambda x: x[0][1])[0][1]
+    # minBlue = min(beansByColor, key=lambda x: x[0][2])[0][2]
+    # maxRed = min(beansByColor, key=lambda x: x[0][0])[0][0]
+    # maxGreen = min(beansByColor, key=lambda x: x[0][1])[0][1]
+    # maxBlue = min(beansByColor, key=lambda x: x[0][2])[0][2]
+
+    # maxDiff = max(maxRed, maxGreen, maxBlue)
+    # minDiff = min(minRed, minGreen, minBlue)
+    # diff = maxDiff - minDiff
+    # print(diff)
 
     for i in range(len(beansByColor)):
         beanWithColor = beansByColor[i]
@@ -60,7 +80,7 @@ def filterCoffeeBeans(beansByColor):
         else:
             assigned = False
             for group in beanGroups:
-                if isCloseColor(group[0][0], color, 20):
+                if isCloseColor(group[0][0], color, 18):
                     group.append(beanWithColor)
                     assigned = True
                     break
@@ -100,11 +120,13 @@ def drawBeans(beans):
         drawBean(bean[1])
 
 
-imageLocation1 = 'images/Image__2019-04-29__03-03-16.bmp'
-imageLocation2 = 'images/Image__2019-04-29__02-58-28.bmp'
-imageLocation3 = 'images/Image__2019-04-29__02-56-26.bmp'
-imageLocation4 = 'images/Image__2019-04-29__02-54-56.bmp'
-image = cv2.cvtColor(cv2.imread(imageLocation3), cv2.COLOR_BGR2RGB)
+if len(sys.argv) < 2:
+    print("No image location supplied")
+    exit()
+
+imageLocation = sys.argv[1]
+
+image = cv2.cvtColor(cv2.imread(imageLocation), cv2.COLOR_BGR2RGB)
 
 mask = generateMask(image)
 beansByColor = getBeansByColor(mask)
